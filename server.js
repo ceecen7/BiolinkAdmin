@@ -5,6 +5,7 @@ import { join, extname }       from 'node:path';
 import { fileURLToPath }       from 'node:url';
 import { exec }                from 'node:child_process';
 import { promisify }           from 'node:util';
+import { createHash }          from 'node:crypto';
 
 // ── load .env ────────────────────────────────────────────────────
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -23,8 +24,12 @@ const CONFIG       = join(WEB_DIR, 'config.json');
 const GH_TOKEN     = process.env.GITHUB_TOKEN       || '';
 const GH_REPO      = process.env.GITHUB_REPO        || 'ceecen7/Biolink';
 const GH_BRANCH    = process.env.GITHUB_BRANCH      || 'main';
-const ADMIN_USER   = process.env.ADMIN_USERNAME     || 'ceecen7';
-const ADMIN_PASS   = process.env.ADMIN_PASSWORD     || '';
+const ADMIN_USER      = process.env.ADMIN_USERNAME      || 'ceecen7';
+const ADMIN_PASS_HASH = process.env.ADMIN_PASSWORD_HASH || '';
+
+function hashPassword(plain) {
+  return createHash('sha256').update(plain).digest('hex');
+}
 
 // Token session in-memory (reset saat server restart)
 const activeSessions = new Set();
@@ -134,7 +139,7 @@ const server = createServer(async (req, res) => {
   // ── POST /api/login ──────────────────────────────────────────
   if (req.method === 'POST' && path === '/api/login') {
     const body = await readBody(req);
-    if (body.username === ADMIN_USER && body.password === ADMIN_PASS) {
+    if (body.username === ADMIN_USER && hashPassword(body.password) === ADMIN_PASS_HASH) {
       const token = crypto.randomUUID();
       activeSessions.add(token);
       json(res, 200, { ok: true, token });
