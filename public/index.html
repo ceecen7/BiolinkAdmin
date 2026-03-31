@@ -304,6 +304,48 @@ section h2{
 .preview-wrap::-webkit-scrollbar{width:4px}
 .preview-wrap::-webkit-scrollbar-track{background:transparent}
 .preview-wrap::-webkit-scrollbar-thumb{background:rgba(123,47,255,.3);border-radius:2px}
+
+/* ── MOBILE RESPONSIVE ── */
+@media (max-width: 768px) {
+  html, body { height: auto; overflow: auto; }
+
+  body { display: block; }
+
+  header {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  header h1 { font-size: .85rem; }
+
+  .header-btns { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .header-btns .btn { justify-content: center; padding: 9px 10px; font-size: .82rem; }
+
+  main {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+    height: auto;
+  }
+
+  .editor {
+    overflow-y: visible;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .preview-panel {
+    height: 600px;
+    flex-shrink: 0;
+  }
+
+  .statusbar { padding: 6px 14px; font-size: .75rem; }
+
+  /* modal lebih kecil di HP */
+  .modal { padding: 20px 16px; }
+  .modal-btns { flex-direction: column; }
+  .modal-btns .btn { justify-content: center; }
+}
 </style>
 </head>
 <body>
