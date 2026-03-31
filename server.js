@@ -199,10 +199,10 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  // ── Static files (public/) ───────────────────────────────────
+  // ── Static files (root) ─────────────────────────────────────
   const filePath = path === '/' || path === ''
-    ? join(__dirname, 'public', 'index.html')
-    : join(__dirname, 'public', path);
+    ? join(__dirname, 'index.html')
+    : join(__dirname, path);
 
   try {
     const data = await readFile(filePath);
