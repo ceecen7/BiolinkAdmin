@@ -1,0 +1,12 @@
+{
+  "name": "biolink-admin",
+  "version": "1.0.0",
+  "description": "Admin panel untuk custom biolink",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js",
+    "dev":   "node --watch server.js"
+  },
+  "private": true
+}

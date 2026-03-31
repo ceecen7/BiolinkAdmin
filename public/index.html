@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin Panel — Biolink</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:       #080012;
+  --surface:  #12011e;
+  --panel:    #1a0230;
+  --border:   rgba(123,47,255,.25);
+  --accent:   #7b2fff;
+  --accent2:  #ff2f7b;
+  --cyan:     #2fffff;
+  --text:     #e2e8f0;
+  --muted:    #a78bfa;
+  --input-bg: rgba(123,47,255,.08);
+  --radius:   12px;
+}
+
+html,body{height:100%;overflow:hidden}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Rajdhani',sans-serif;
+  display:flex;
+  flex-direction:column;
+}
+
+/* ── HEADER ── */
+header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 24px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+  gap:12px;
+}
+header h1{
+  font-family:'Orbitron',sans-serif;
+  font-size:1.05rem;
+  font-weight:700;
+  background:linear-gradient(90deg,#c084fc,#f0abfc,#67e8f9,#c084fc);
+  background-size:300%;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  animation:shimmer 4s linear infinite;
+  white-space:nowrap;
+}
+@keyframes shimmer{to{background-position:300% center}}
+
+.header-btns{display:flex;gap:10px;flex-shrink:0}
+
+/* ── BUTTONS ── */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 18px;border-radius:10px;border:none;
+  font-family:'Rajdhani',sans-serif;font-size:.9rem;font-weight:600;
+  cursor:pointer;transition:all .2s;letter-spacing:.5px;
+}
+.btn-save{background:linear-gradient(135deg,#7b2fff,#4c1d95);color:#fff;}
+.btn-save:hover{background:linear-gradient(135deg,#9b52ff,#6d28d9);transform:translateY(-1px);box-shadow:0 0 20px #7b2fff66}
+.btn-commit{background:linear-gradient(135deg,#ff2f7b,#be185d);color:#fff;}
+.btn-commit:hover{background:linear-gradient(135deg,#ff5599,#db2777);transform:translateY(-1px);box-shadow:0 0 20px #ff2f7b66}
+.btn-small{padding:5px 10px;font-size:.8rem;border-radius:7px}
+.btn-danger{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3)}
+.btn-danger:hover{background:rgba(239,68,68,.3)}
+.btn-ghost{background:rgba(123,47,255,.1);color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{background:rgba(123,47,255,.2);color:var(--text)}
+.btn-add{background:rgba(47,255,255,.08);color:var(--cyan);border:1px dashed rgba(47,255,255,.3);width:100%;justify-content:center;margin-top:8px}
+.btn-add:hover{background:rgba(47,255,255,.15)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+
+/* ── LAYOUT ── */
+main{
+  display:grid;
+  grid-template-columns:380px 1fr;
+  flex:1;
+  overflow:hidden;
+}
+
+/* ── EDITOR ── */
+.editor{
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  overflow-y:auto;
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+.editor::-webkit-scrollbar{width:4px}
+.editor::-webkit-scrollbar-track{background:transparent}
+.editor::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+section h2{
+  font-family:'Orbitron',sans-serif;
+  font-size:.75rem;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:2px;
+  margin-bottom:14px;
+  padding-bottom:8px;
+  border-bottom:1px solid var(--border);
+}
+
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.form-group label{font-size:.85rem;color:var(--muted);letter-spacing:.5px}
+.form-group input,.form-group textarea,.form-group select{
+  background:var(--input-bg);
+  border:1px solid var(--border);
+  border-radius:8px;
+  color:var(--text);
+  padding:9px 12px;
+  font-family:'Rajdhani',sans-serif;
+  font-size:.95rem;
+  transition:border-color .2s;
+  outline:none;
+  width:100%;
+}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(123,47,255,.15);
+}
+.form-group textarea{resize:vertical;min-height:80px;line-height:1.5}
+.form-group select option{background:#1a0230;color:var(--text)}
+
+/* ── LINK ITEMS ── */
+.link-item{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:12px;
+  margin-bottom:8px;
+  cursor:grab;
+  transition:all .2s;
+  position:relative;
+}
+.link-item:hover{border-color:rgba(123,47,255,.5)}
+.link-item.dragging{opacity:.5;cursor:grabbing}
+.link-item.drag-over{border-color:var(--cyan);background:rgba(47,255,255,.05)}
+
+.link-item-header{
+  display:flex;align-items:center;gap:8px;margin-bottom:8px;
+}
+.link-drag{color:var(--muted);font-size:1rem;cursor:grab;flex-shrink:0}
+.link-icon-preview{
+  font-size:1.2rem;width:30px;height:30px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(123,47,255,.15);border-radius:7px;flex-shrink:0;
+}
+.link-label-preview{flex:1;font-size:.9rem;font-weight:600;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.link-actions{display:flex;gap:6px;flex-shrink:0}
+
+.link-item-body{display:none;flex-direction:column;gap:8px;margin-top:4px}
+.link-item.expanded .link-item-body{display:flex}
+
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* ── PREVIEW PANEL ── */
+.preview-panel{
+  background:#030008;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+.preview-panel h2{
+  font-family:'Orbitron',sans-serif;
+  font-size:.75rem;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:2px;
+  padding:14px 24px;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.preview-wrap{
+  flex:1;
+  overflow:auto;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  padding:40px 20px;
+}
+
+/* ── PREVIEW CARD (mirrors biolink) ── */
+.preview-card{
+  width:100%;
+  max-width:380px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:16px;
+  position:relative;
+  z-index:1;
+}
+
+.p-avatar-wrap{position:relative;width:90px;height:90px}
+.p-avatar-ring{
+  position:absolute;inset:-5px;border-radius:50%;
+  background:conic-gradient(#7b2fff,#ff2f7b,#2fffff,#7b2fff);
+  animation:spin 4s linear infinite;
+}
+.p-avatar-ring::before{
+  content:'';position:absolute;inset:4px;border-radius:50%;background:#020010;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.p-avatar{
+  position:absolute;inset:0;border-radius:50%;overflow:hidden;
+  background:radial-gradient(circle at 35% 35%,#a78bfa,#4c1d95 60%,#020010);
+  display:flex;align-items:center;justify-content:center;
+}
+.p-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+
+.p-name{
+  font-family:'Orbitron',sans-serif;font-size:1.2rem;font-weight:900;text-align:center;
+  background:linear-gradient(90deg,#c084fc,#f0abfc,#67e8f9,#c084fc);
+  background-size:300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  animation:shimmer 4s linear infinite;
+}
+.p-handle{color:#a78bfa;font-size:.8rem;letter-spacing:2px;margin-top:-8px}
+.p-bio{color:#e2e8f0;font-size:.85rem;text-align:center;line-height:1.6;max-width:320px;
+  text-shadow:0 0 12px rgba(192,132,252,.4)}
+.p-divider{width:80%;height:1px;background:linear-gradient(90deg,transparent,#7b2fff80,#2fffff80,transparent)}
+.p-links{width:100%;display:flex;flex-direction:column;gap:10px}
+
+.p-link{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 16px;border-radius:12px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.04);
+  backdrop-filter:blur(12px);
+  color:#e2e8f0;font-size:.9rem;font-weight:600;
+  text-decoration:none;letter-spacing:.5px;
+}
+.p-link-icon{
+  width:30px;height:30px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;
+}
+.p-link-label{flex:1;font-size:.85rem}
+.p-link-arr{opacity:.4;font-size:.75rem}
+
+.p-link.purple .p-link-icon{background:#7b2fff33}
+.p-link.pink   .p-link-icon{background:#ff2f7b33}
+.p-link.gold   .p-link-icon{background:#fbbf2433}
+.p-link.cyan   .p-link-icon{background:#2fffff22}
+
+.p-footer{color:#a78bfa;font-size:.7rem;letter-spacing:2px;text-transform:uppercase;
+  text-align:center;text-shadow:0 0 10px rgba(167,139,250,.6)}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:24px;right:24px;z-index:999;
+  display:flex;flex-direction:column;gap:8px;pointer-events:none;
+}
+.toast-msg{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:12px 18px;
+  font-size:.9rem;
+  max-width:320px;
+  animation:slide-in .3s ease;
+  pointer-events:all;
+  backdrop-filter:blur(12px);
+}
+.toast-msg.success{border-color:rgba(74,222,128,.4);color:#4ade80}
+.toast-msg.error  {border-color:rgba(239,68,68,.4);color:#ef4444}
+.toast-msg.info   {border-color:rgba(123,47,255,.4);color:#c084fc}
+@keyframes slide-in{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+
+/* ── COMMIT MODAL ── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
+  z-index:500;align-items:center;justify-content:center;backdrop-filter:blur(4px);
+}
+.modal-overlay.open{display:flex}
+.modal{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:16px;padding:28px;width:420px;max-width:90vw;
+}
+.modal h3{font-family:'Orbitron',sans-serif;font-size:1rem;margin-bottom:16px;color:#c084fc}
+.modal .form-group{margin-bottom:16px}
+.modal-btns{display:flex;gap:10px;justify-content:flex-end}
+
+/* ── STATUS BAR ── */
+.statusbar{
+  background:var(--surface);border-top:1px solid var(--border);
+  padding:6px 20px;font-size:.8rem;color:var(--muted);
+  flex-shrink:0;display:flex;align-items:center;gap:8px;
+}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#4ade80;flex-shrink:0}
+
+/* ── SCROLLBAR ── */
+.preview-wrap::-webkit-scrollbar{width:4px}
+.preview-wrap::-webkit-scrollbar-track{background:transparent}
+.preview-wrap::-webkit-scrollbar-thumb{background:rgba(123,47,255,.3);border-radius:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌌 Biolink Admin Panel</h1>
+  <div class="header-btns">
+    <button class="btn btn-save"   id="btn-save">💾 Simpan</button>
+    <button class="btn btn-commit" id="btn-commit">🚀 Commit &amp; Push</button>
+  </div>
+</header>
+
+<main>
+  <!-- ── EDITOR ── -->
+  <div class="editor">
+
+    <section id="section-profile">
+      <h2>Profil</h2>
+
+      <div class="form-group">
+        <label>Nama</label>
+        <input type="text" id="inp-name" placeholder="Nama kamu" />
+      </div>
+      <div class="form-group">
+        <label>Handle / Username</label>
+        <input type="text" id="inp-handle" placeholder="@username" />
+      </div>
+      <div class="form-group">
+        <label>Avatar URL atau path</label>
+        <input type="text" id="inp-avatar" placeholder="assets/img/avatar.jpg" />
+      </div>
+      <div class="form-group">
+        <label>Bio</label>
+        <textarea id="inp-bio" placeholder="Tulis bio kamu..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Footer</label>
+        <input type="text" id="inp-footer" placeholder="✦ made with stardust ✦" />
+      </div>
+    </section>
+
+    <section id="section-links">
+      <h2>Links</h2>
+      <div id="links-list"></div>
+      <button class="btn btn-add" id="btn-add-link">+ Tambah Link</button>
+    </section>
+
+  </div>
+
+  <!-- ── PREVIEW ── -->
+  <div class="preview-panel">
+    <h2>Live Preview</h2>
+    <div class="preview-wrap">
+      <div class="preview-card" id="preview-card">
+        <div class="p-avatar-wrap">
+          <div class="p-avatar-ring"></div>
+          <div class="p-avatar">
+            <img id="p-avatar-img" src="" alt="" />
+          </div>
+        </div>
+        <div class="p-name"   id="p-name"></div>
+        <div class="p-handle" id="p-handle"></div>
+        <p   class="p-bio"    id="p-bio"></p>
+        <div class="p-divider"></div>
+        <div class="p-links"  id="p-links"></div>
+        <div class="p-footer" id="p-footer"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="statusbar">
+  <span class="status-dot" id="status-dot"></span>
+  <span id="status-text">Memuat config...</span>
+</div>
+
+<!-- ── COMMIT MODAL ── -->
+<div class="modal-overlay" id="modal-commit">
+  <div class="modal">
+    <h3>🚀 Commit &amp; Push ke GitHub</h3>
+    <div class="form-group">
+      <label>Pesan commit</label>
+      <input type="text" id="inp-commit-msg" placeholder="update: ubah nama dan bio" value="update: edit via admin panel" />
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" id="btn-modal-cancel">Batal</button>
+      <button class="btn btn-commit" id="btn-modal-confirm">🚀 Push Sekarang</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────
+let config = { name:'', handle:'', bio:'', avatar:'', footer:'', links:[] };
+let dragSrcIdx = null;
+
+// ── TOAST ──────────────────────────────────────────────────────────
+function toast(msg, type='info', ms=3500) {
+  const wrap = document.getElementById('toast');
+  const el   = document.createElement('div');
+  el.className = `toast-msg ${type}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => { el.style.animation='slide-in .3s ease reverse'; setTimeout(()=>el.remove(),300); }, ms);
+}
+
+// ── STATUS BAR ──────────────────────────────────────────────────────
+function setStatus(msg, ok=true) {
+  document.getElementById('status-text').textContent = msg;
+  document.getElementById('status-dot').style.background = ok ? '#4ade80' : '#ef4444';
+}
+
+// ── LIVE PREVIEW ───────────────────────────────────────────────────
+function updatePreview() {
+  const c = readForm();
+  document.getElementById('p-name').textContent   = c.name;
+  document.getElementById('p-handle').textContent = c.handle;
+  document.getElementById('p-bio').innerHTML       = c.bio.replace(/\n/g,'<br>');
+  document.getElementById('p-footer').textContent  = c.footer;
+
+  const img = document.getElementById('p-avatar-img');
+  img.src = c.avatar ? `http://localhost:3000/${c.avatar}` : '';
+  img.alt = c.name;
+
+  const linksEl = document.getElementById('p-links');
+  linksEl.innerHTML = '';
+  c.links.forEach(l => {
+    const d = document.createElement('div');
+    d.className = `p-link ${l.color}`;
+    d.innerHTML = `
+      <div class="p-link-icon">${l.icon}</div>
+      <span class="p-link-label">${l.label}</span>
+      <span class="p-link-arr">›</span>
+    `;
+    linksEl.appendChild(d);
+  });
+}
+
+// ── READ FORM ──────────────────────────────────────────────────────
+function readForm() {
+  const links = [...document.querySelectorAll('.link-item')].map(el => ({
+    id:    el.dataset.id,
+    label: el.querySelector('.inp-link-label').value,
+    url:   el.querySelector('.inp-link-url').value,
+    icon:  el.querySelector('.inp-link-icon').value,
+    color: el.querySelector('.inp-link-color').value,
+  }));
+  return {
+    name:   document.getElementById('inp-name').value,
+    handle: document.getElementById('inp-handle').value,
+    avatar: document.getElementById('inp-avatar').value,
+    bio:    document.getElementById('inp-bio').value,
+    footer: document.getElementById('inp-footer').value,
+    links,
+  };
+}
+
+// ── RENDER LINK ITEM ───────────────────────────────────────────────
+function renderLinkItem(link) {
+  const id  = link.id || Date.now().toString();
+  const div = document.createElement('div');
+  div.className   = 'link-item';
+  div.dataset.id  = id;
+  div.draggable   = true;
+
+  div.innerHTML = `
+    <div class="link-item-header">
+      <span class="link-drag" title="Geser untuk reorder">⠿</span>
+      <span class="link-icon-preview">${link.icon}</span>
+      <span class="link-label-preview">${link.label || '(tanpa label)'}</span>
+      <div class="link-actions">
+        <button class="btn btn-small btn-ghost btn-toggle" title="Edit">✏️</button>
+        <button class="btn btn-small btn-danger btn-del" title="Hapus">✕</button>
+      </div>
+    </div>
+    <div class="link-item-body">
+      <div class="form-group">
+        <label>Label</label>
+        <input type="text"  class="inp-link-label" value="${escHtml(link.label)}" placeholder="TikTok — @username" />
+      </div>
+      <div class="form-group">
+        <label>URL</label>
+        <input type="url"   class="inp-link-url"   value="${escHtml(link.url)}"   placeholder="https://..." />
+      </div>
+      <div class="row-2">
+        <div class="form-group">
+          <label>Icon (emoji)</label>
+          <input type="text" class="inp-link-icon"  value="${escHtml(link.icon)}"  placeholder="🎵" />
+        </div>
+        <div class="form-group">
+          <label>Warna</label>
+          <select class="inp-link-color">
+            ${['purple','pink','gold','cyan'].map(c =>
+              `<option value="${c}" ${link.color===c?'selected':''}>${c}</option>`
+            ).join('')}
+          </select>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Toggle expand
+  div.querySelector('.btn-toggle').addEventListener('click', () => {
+    div.classList.toggle('expanded');
+  });
+
+  // Delete
+  div.querySelector('.btn-del').addEventListener('click', () => {
+    div.remove();
+    updatePreview();
+  });
+
+  // Live edit → update preview & header
+  div.querySelectorAll('input,select').forEach(el => {
+    el.addEventListener('input', () => {
+      const iconVal  = div.querySelector('.inp-link-icon').value;
+      const labelVal = div.querySelector('.inp-link-label').value;
+      div.querySelector('.link-icon-preview').textContent = iconVal;
+      div.querySelector('.link-label-preview').textContent = labelVal || '(tanpa label)';
+      updatePreview();
+    });
+  });
+
+  // Drag-and-drop
+  div.addEventListener('dragstart', e => {
+    dragSrcIdx = [...document.querySelectorAll('.link-item')].indexOf(div);
+    div.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  div.addEventListener('dragend', () => div.classList.remove('dragging'));
+  div.addEventListener('dragover', e => {
+    e.preventDefault();
+    div.classList.add('drag-over');
+    e.dataTransfer.dropEffect = 'move';
+  });
+  div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+  div.addEventListener('drop', e => {
+    e.preventDefault();
+    div.classList.remove('drag-over');
+    const items    = [...document.querySelectorAll('.link-item')];
+    const targetIdx = items.indexOf(div);
+    if (dragSrcIdx === null || dragSrcIdx === targetIdx) return;
+    const src = items[dragSrcIdx];
+    const list = document.getElementById('links-list');
+    if (dragSrcIdx < targetIdx) {
+      div.after(src);
+    } else {
+      div.before(src);
+    }
+    updatePreview();
+  });
+
+  return div;
+}
+
+function escHtml(s='') {
+  return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── RENDER ALL LINKS ───────────────────────────────────────────────
+function renderLinks(links) {
+  const list = document.getElementById('links-list');
+  list.innerHTML = '';
+  links.forEach(l => list.appendChild(renderLinkItem(l)));
+}
+
+// ── POPULATE FORM ──────────────────────────────────────────────────
+function populateForm(cfg) {
+  document.getElementById('inp-name').value   = cfg.name   || '';
+  document.getElementById('inp-handle').value = cfg.handle || '';
+  document.getElementById('inp-avatar').value = cfg.avatar || '';
+  document.getElementById('inp-bio').value    = cfg.bio    || '';
+  document.getElementById('inp-footer').value = cfg.footer || '';
+  renderLinks(cfg.links || []);
+  updatePreview();
+}
+
+// ── LOAD CONFIG ────────────────────────────────────────────────────
+async function loadConfig() {
+  try {
+    const r = await fetch('/api/config');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    config = await r.json();
+    populateForm(config);
+    setStatus('Config dimuat. Siap diedit.');
+  } catch (e) {
+    setStatus('Gagal memuat config: ' + e.message, false);
+    toast('Gagal memuat config: ' + e.message, 'error');
+  }
+}
+
+// ── SAVE CONFIG ────────────────────────────────────────────────────
+async function saveConfig() {
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.textContent = '⏳ Menyimpan...';
+  try {
+    const data = readForm();
+    const r    = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:   JSON.stringify(data),
+    });
+    const res = await r.json();
+    if (!r.ok) throw new Error(res.error || 'Gagal');
+    config = data;
+    toast(res.message || 'Disimpan!', 'success');
+    setStatus('Tersimpan — ' + new Date().toLocaleTimeString('id-ID'));
+  } catch (e) {
+    toast('Gagal simpan: ' + e.message, 'error');
+    setStatus('Gagal menyimpan.', false);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 Simpan';
+  }
+}
+
+// ── COMMIT & PUSH ──────────────────────────────────────────────────
+async function doCommit() {
+  const msg = document.getElementById('inp-commit-msg').value.trim() || 'update: edit via admin panel';
+  const btn = document.getElementById('btn-modal-confirm');
+  btn.disabled = true;
+  btn.textContent = '⏳ Pushing...';
+  try {
+    // Save first
+    const data = readForm();
+    await fetch('/api/config', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
+    });
+    // Then commit
+    const r   = await fetch('/api/commit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:   JSON.stringify({ message: msg }),
+    });
+    const res = await r.json();
+    if (!r.ok) throw new Error(res.error || 'Gagal');
+    closeCommitModal();
+    toast(res.message || 'Berhasil push!', 'success', 5000);
+    setStatus('Push ke GitHub sukses! ' + new Date().toLocaleTimeString('id-ID'));
+    loadGitStatus();
+  } catch (e) {
+    toast('Gagal commit: ' + e.message, 'error', 6000);
+    setStatus('Gagal push.', false);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🚀 Push Sekarang';
+  }
+}
+
+// ── GIT STATUS ─────────────────────────────────────────────────────
+async function loadGitStatus() {
+  try {
+    const r   = await fetch('/api/status');
+    const res = await r.json();
+    if (res.log) {
+      const firstLine = res.log.split('\n')[0];
+      setStatus('Commit terakhir: ' + firstLine);
+    }
+  } catch { /* silent */ }
+}
+
+// ── MODAL ──────────────────────────────────────────────────────────
+function openCommitModal()  { document.getElementById('modal-commit').classList.add('open') }
+function closeCommitModal() { document.getElementById('modal-commit').classList.remove('open') }
+
+// ── INPUT LIVE PREVIEW ─────────────────────────────────────────────
+['inp-name','inp-handle','inp-avatar','inp-bio','inp-footer'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updatePreview);
+});
+
+// ── ADD LINK ───────────────────────────────────────────────────────
+document.getElementById('btn-add-link').addEventListener('click', () => {
+  const newLink = { id: Date.now().toString(), label:'', url:'', icon:'🔗', color:'purple' };
+  const list = document.getElementById('links-list');
+  const item = renderLinkItem(newLink);
+  item.classList.add('expanded');
+  list.appendChild(item);
+  item.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  updatePreview();
+});
+
+// ── SAVE ───────────────────────────────────────────────────────────
+document.getElementById('btn-save').addEventListener('click', saveConfig);
+
+// ── COMMIT ─────────────────────────────────────────────────────────
+document.getElementById('btn-commit').addEventListener('click', openCommitModal);
+document.getElementById('btn-modal-cancel').addEventListener('click', closeCommitModal);
+document.getElementById('btn-modal-confirm').addEventListener('click', doCommit);
+document.getElementById('modal-commit').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeCommitModal();
+});
+
+// ── KEYBOARD SHORTCUTS ─────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveConfig(); }
+  if (e.key === 'Escape') closeCommitModal();
+});
+
+// ── INIT ───────────────────────────────────────────────────────────
+loadConfig().then(loadGitStatus);
+</script>
+
+</body>
+</html>
