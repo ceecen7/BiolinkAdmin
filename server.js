@@ -1,12 +1,12 @@
 // Admin Panel Server — Node.js built-in only
 import { createServer }       from 'node:http';
-import { readFile, writeFile, copyFile } from 'node:fs/promises';
-import { join, extname, basename } from 'node:path';
-import { fileURLToPath }      from 'node:url';
-import { exec }               from 'node:child_process';
-import { promisify }          from 'node:util';
+import { readFile, writeFile } from 'node:fs/promises';
+import { join, extname }       from 'node:path';
+import { fileURLToPath }       from 'node:url';
+import { exec }                from 'node:child_process';
+import { promisify }           from 'node:util';
 
-// ── load .env manually (no dotenv dep) ──────────────────────────
+// ── load .env ────────────────────────────────────────────────────
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 try {
   const raw = await readFile(join(__dirname, '.env'), 'utf8');
@@ -16,13 +16,13 @@ try {
   }
 } catch { /* .env optional */ }
 
-const execAsync  = promisify(exec);
-const PORT       = Number(process.env.ADMIN_PORT)  || 4000;
-const WEB_DIR    = process.env.WEB_DIR             || '/root/Web';
-const CONFIG     = join(WEB_DIR, 'config.json');
-const GH_TOKEN   = process.env.GITHUB_TOKEN        || '';
-const GH_REPO    = process.env.GITHUB_REPO         || 'ceecen7/Biolink';
-const GH_BRANCH  = process.env.GITHUB_BRANCH       || 'main';
+const execAsync = promisify(exec);
+const PORT      = Number(process.env.ADMIN_PORT) || 4000;
+const WEB_DIR   = process.env.WEB_DIR            || '/root/Web';
+const CONFIG    = join(WEB_DIR, 'config.json');
+const GH_TOKEN  = process.env.GITHUB_TOKEN       || '';
+const GH_REPO   = process.env.GITHUB_REPO        || 'ceecen7/Biolink';
+const GH_BRANCH = process.env.GITHUB_BRANCH      || 'main';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -34,6 +34,69 @@ const MIME = {
   '.svg':  'image/svg+xml',
   '.ico':  'image/x-icon',
 };
+
+// ── generate static index.html dari config ───────────────────────
+function generateHTML(cfg) {
+  const linksHTML = (cfg.links || []).map(l => `
+      <a href="${escAttr(l.url)}" target="_blank" rel="noopener" class="link-btn ${escAttr(l.color)}">
+        <div class="link-icon">${l.icon}</div>
+        <span class="link-label">${escText(l.label)}</span>
+        <span class="link-arr">›</span>
+      </a>`).join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${escText(cfg.name)} | ${escText(cfg.handle)}</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+  <canvas id="stars-canvas"></canvas>
+
+  <div class="nebula nebula-1"></div>
+  <div class="nebula nebula-2"></div>
+  <div class="nebula nebula-3"></div>
+
+  <div class="card">
+
+    <div class="avatar-wrap">
+      <div class="avatar-ring"></div>
+      <div class="avatar">
+        <img src="${escAttr(cfg.avatar)}" alt="${escAttr(cfg.name)}" />
+      </div>
+    </div>
+
+    <div class="name">${escText(cfg.name)}</div>
+    <div class="handle">${escText(cfg.handle)}</div>
+
+    <p class="bio">${escText(cfg.bio).replace(/\n/g, '<br>')}</p>
+
+    <div class="divider"></div>
+
+    <div class="links">
+${linksHTML}
+    </div>
+
+    <div class="footer">${escText(cfg.footer)}</div>
+
+  </div>
+
+  <script src="assets/js/app.js"></script>
+
+</body>
+</html>
+`;
+}
+
+function escText(s = '') {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escAttr(s = '') {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
 
 // ── helpers ──────────────────────────────────────────────────────
 async function readBody(req) {
@@ -75,13 +138,20 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  // ── POST /api/config ─────────────────────────────────────────
+  // ── POST /api/config — simpan config + generate index.html ───
   if (req.method === 'POST' && path === '/api/config') {
     try {
       const body = await readBody(req);
       if (!body.name) { json(res, 400, { error: 'Nama wajib diisi' }); return; }
+
+      // Simpan config.json
       await writeFile(CONFIG, JSON.stringify(body, null, 2), 'utf8');
-      json(res, 200, { ok: true, message: 'Config berhasil disimpan!' });
+
+      // Generate index.html static dari config
+      const html = generateHTML(body);
+      await writeFile(join(WEB_DIR, 'index.html'), html, 'utf8');
+
+      json(res, 200, { ok: true, message: 'Disimpan! index.html sudah diperbarui.' });
     } catch (e) {
       json(res, 500, { error: e.message });
     }
@@ -110,8 +180,8 @@ const server = createServer(async (req, res) => {
       }
 
       await execAsync(`git -C "${WEB_DIR}" commit -m "${msg}"`);
-      const { stdout: pushOut } = await execAsync(`git -C "${WEB_DIR}" push origin ${GH_BRANCH}`);
-      json(res, 200, { ok: true, message: `Berhasil commit & push ke GitHub! (${GH_REPO})` });
+      await execAsync(`git -C "${WEB_DIR}" push origin ${GH_BRANCH}`);
+      json(res, 200, { ok: true, message: `Berhasil push ke GitHub! GitHub Pages akan update otomatis.` });
     } catch (e) {
       json(res, 500, { error: e.stderr || e.message });
     }
