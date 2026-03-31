@@ -367,23 +367,24 @@ section h2{
 
       <div class="form-group">
         <label>Nama</label>
-        <input type="text" id="inp-name" placeholder="Nama kamu" />
+        <input type="text" id="inp-name" value="afr1zal annabil" />
       </div>
       <div class="form-group">
         <label>Handle / Username</label>
-        <input type="text" id="inp-handle" placeholder="@username" />
+        <input type="text" id="inp-handle" value="@ceecen" />
       </div>
       <div class="form-group">
         <label>Avatar URL atau path</label>
-        <input type="text" id="inp-avatar" placeholder="assets/img/avatar.jpg" />
+        <input type="text" id="inp-avatar" value="assets/img/avatar.jpg" />
       </div>
       <div class="form-group">
         <label>Bio</label>
-        <textarea id="inp-bio" placeholder="Tulis bio kamu..."></textarea>
+        <textarea id="inp-bio">Haii! Selamat datang di biolink ku 🌌
+Kumpulan semua sosial media &amp; konten aku ada di sini ✦</textarea>
       </div>
       <div class="form-group">
         <label>Footer</label>
-        <input type="text" id="inp-footer" placeholder="✦ made with stardust ✦" />
+        <input type="text" id="inp-footer" value="✦ made with stardust ✦" />
       </div>
     </section>
 
@@ -440,8 +441,23 @@ section h2{
 <div id="toast"></div>
 
 <script>
+// ── DEFAULT CONFIG (sesuai web asli) ───────────────────────────────
+const DEFAULT_CONFIG = {
+  name:   'afr1zal annabil',
+  handle: '@ceecen',
+  avatar: 'assets/img/avatar.jpg',
+  bio:    'Haii! Selamat datang di biolink ku 🌌\nKumpulan semua sosial media & konten aku ada di sini ✦',
+  footer: '✦ made with stardust ✦',
+  links: [
+    { id:'1', label:'TikTok — @steven_cocc',    url:'https://www.tiktok.com/@steven_cocc',                           icon:'🎵', color:'purple' },
+    { id:'2', label:'YouTube — Afrizalannabil', url:'https://www.youtube.com/@Afrizalannabil',                       icon:'▶️', color:'gold'   },
+    { id:'3', label:'Instagram — @stv474777',   url:'https://www.instagram.com/stv474777?igsh=dGo1NzMzanozcHNm',    icon:'📸', color:'pink'   },
+    { id:'4', label:'Discord — Join Server',    url:'https://discord.gg/XWXBXccC',                                  icon:'🎮', color:'cyan'   },
+  ],
+};
+
 // ── STATE ──────────────────────────────────────────────────────────
-let config = { name:'', handle:'', bio:'', avatar:'', footer:'', links:[] };
+let config = { ...DEFAULT_CONFIG };
 let dragSrcIdx = null;
 
 // ── TOAST ──────────────────────────────────────────────────────────
@@ -627,15 +643,18 @@ function populateForm(cfg) {
 
 // ── LOAD CONFIG ────────────────────────────────────────────────────
 async function loadConfig() {
+  // Tampilkan default dulu supaya form langsung terisi
+  populateForm(DEFAULT_CONFIG);
   try {
     const r = await fetch('/api/config');
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     config = await r.json();
     populateForm(config);
     setStatus('Config dimuat. Siap diedit.');
-  } catch (e) {
-    setStatus('Gagal memuat config: ' + e.message, false);
-    toast('Gagal memuat config: ' + e.message, 'error');
+  } catch {
+    // Kalau server tidak jalan, tetap pakai default
+    config = { ...DEFAULT_CONFIG };
+    setStatus('Pakai default — server tidak terhubung.', false);
   }
 }
 
