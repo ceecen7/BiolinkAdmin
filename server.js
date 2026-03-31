@@ -5,7 +5,7 @@ import { join, extname }       from 'node:path';
 import { fileURLToPath }       from 'node:url';
 import { exec }                from 'node:child_process';
 import { promisify }           from 'node:util';
-import { createHash }          from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 // ── load .env ────────────────────────────────────────────────────
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -128,6 +128,7 @@ function json(res, code, data) {
 
 // ── server ───────────────────────────────────────────────────────
 const server = createServer(async (req, res) => {
+  try {
   const url  = new URL(req.url, `http://localhost`);
   const path = url.pathname;
 
@@ -140,7 +141,7 @@ const server = createServer(async (req, res) => {
   if (req.method === 'POST' && path === '/api/login') {
     const body = await readBody(req);
     if (body.username === ADMIN_USER && hashPassword(body.password) === ADMIN_PASS_HASH) {
-      const token = crypto.randomUUID();
+      const token = randomUUID();
       activeSessions.add(token);
       json(res, 200, { ok: true, token });
     } else {
@@ -251,6 +252,13 @@ const server = createServer(async (req, res) => {
   } catch {
     res.writeHead(404, { 'Content-Type': 'text/plain' });
     res.end('404 Not Found');
+  }
+
+  } catch (err) {
+    // Global error handler — selalu balik JSON bukan HTML
+    if (!res.headersSent) {
+      json(res, 500, { error: 'Server error: ' + err.message });
+    }
   }
 });
 
