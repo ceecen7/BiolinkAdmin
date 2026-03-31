@@ -16,13 +16,18 @@ try {
   }
 } catch { /* .env optional */ }
 
-const execAsync = promisify(exec);
-const PORT      = Number(process.env.ADMIN_PORT) || 4000;
-const WEB_DIR   = process.env.WEB_DIR            || '/root/Web';
-const CONFIG    = join(WEB_DIR, 'config.json');
-const GH_TOKEN  = process.env.GITHUB_TOKEN       || '';
-const GH_REPO   = process.env.GITHUB_REPO        || 'ceecen7/Biolink';
-const GH_BRANCH = process.env.GITHUB_BRANCH      || 'main';
+const execAsync    = promisify(exec);
+const PORT         = Number(process.env.ADMIN_PORT) || 4000;
+const WEB_DIR      = process.env.WEB_DIR            || '/root/Web';
+const CONFIG       = join(WEB_DIR, 'config.json');
+const GH_TOKEN     = process.env.GITHUB_TOKEN       || '';
+const GH_REPO      = process.env.GITHUB_REPO        || 'ceecen7/Biolink';
+const GH_BRANCH    = process.env.GITHUB_BRANCH      || 'main';
+const ADMIN_USER   = process.env.ADMIN_USERNAME     || 'ceecen7';
+const ADMIN_PASS   = process.env.ADMIN_PASSWORD     || '';
+
+// Token session in-memory (reset saat server restart)
+const activeSessions = new Set();
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -123,8 +128,38 @@ const server = createServer(async (req, res) => {
 
   res.setHeader('Access-Control-Allow-Origin',  '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+
+  // ── POST /api/login ──────────────────────────────────────────
+  if (req.method === 'POST' && path === '/api/login') {
+    const body = await readBody(req);
+    if (body.username === ADMIN_USER && body.password === ADMIN_PASS) {
+      const token = crypto.randomUUID();
+      activeSessions.add(token);
+      json(res, 200, { ok: true, token });
+    } else {
+      json(res, 401, { error: 'Username atau password salah.' });
+    }
+    return;
+  }
+
+  // ── POST /api/logout ─────────────────────────────────────────
+  if (req.method === 'POST' && path === '/api/logout') {
+    const token = (req.headers['authorization'] || '').replace('Bearer ', '');
+    activeSessions.delete(token);
+    json(res, 200, { ok: true });
+    return;
+  }
+
+  // ── Auth check untuk semua /api/* ─────────────────────────────
+  if (path.startsWith('/api/')) {
+    const token = (req.headers['authorization'] || '').replace('Bearer ', '');
+    if (!activeSessions.has(token)) {
+      json(res, 401, { error: 'Unauthorized. Silakan login dulu.' });
+      return;
+    }
+  }
 
   // ── GET /api/config ──────────────────────────────────────────
   if (req.method === 'GET' && path === '/api/config') {

@@ -346,15 +346,75 @@ section h2{
   .modal-btns { flex-direction: column; }
   .modal-btns .btn { justify-content: center; }
 }
+/* ── LOGIN SCREEN ── */
+#login-screen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+}
+#login-screen.hidden { display: none; }
+
+.login-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px 36px;
+  width: 360px; max-width: 90vw;
+  display: flex; flex-direction: column; gap: 20px;
+  box-shadow: 0 0 60px rgba(123,47,255,.2);
+}
+.login-box h2 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem; font-weight: 700; text-align: center;
+  background: linear-gradient(90deg,#c084fc,#f0abfc,#67e8f9,#c084fc);
+  background-size: 300%; -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4s linear infinite;
+}
+.login-box .form-group { margin-bottom: 0; }
+.login-box .btn-login {
+  background: linear-gradient(135deg,#7b2fff,#4c1d95);
+  color: #fff; width: 100%; justify-content: center;
+  padding: 12px; font-size: 1rem; border-radius: 12px;
+  margin-top: 4px;
+}
+.login-box .btn-login:hover {
+  background: linear-gradient(135deg,#9b52ff,#6d28d9);
+  box-shadow: 0 0 24px #7b2fff66;
+}
+.login-error {
+  color: #ef4444; font-size: .85rem; text-align: center;
+  min-height: 20px;
+}
+.login-logo { text-align: center; font-size: 2.5rem; }
 </style>
 </head>
 <body>
+
+<!-- ── LOGIN SCREEN ── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">🌌</div>
+    <h2>Biolink Admin Panel</h2>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="login-user" autocomplete="username" />
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="login-pass" autocomplete="current-password" />
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <button class="btn btn-login" id="btn-login">🔑 Masuk</button>
+  </div>
+</div>
 
 <header>
   <h1>🌌 Biolink Admin Panel</h1>
   <div class="header-btns">
     <button class="btn btn-save"   id="btn-save">💾 Simpan</button>
     <button class="btn btn-commit" id="btn-commit">🚀 Commit &amp; Push</button>
+    <button class="btn btn-ghost"  id="btn-logout" style="padding:9px 12px" title="Logout">🚪</button>
   </div>
 </header>
 
@@ -441,6 +501,54 @@ Kumpulan semua sosial media &amp; konten aku ada di sini ✦</textarea>
 <div id="toast"></div>
 
 <script>
+// ── AUTH ────────────────────────────────────────────────────────────
+let authToken = localStorage.getItem('admin_token') || '';
+
+function authHeaders() {
+  return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken };
+}
+
+async function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  const btn   = document.getElementById('btn-login');
+  errEl.textContent = '';
+  btn.disabled = true; btn.textContent = '⏳ Memverifikasi...';
+  try {
+    const r   = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: user, password: pass }),
+    });
+    const res = await r.json();
+    if (!r.ok) throw new Error(res.error || 'Login gagal');
+    authToken = res.token;
+    localStorage.setItem('admin_token', authToken);
+    document.getElementById('login-screen').classList.add('hidden');
+    loadConfig().then(loadGitStatus);
+  } catch (e) {
+    errEl.textContent = e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = '🔑 Masuk';
+  }
+}
+
+async function doLogout() {
+  await fetch('/api/logout', { method:'POST', headers: authHeaders() }).catch(()=>{});
+  authToken = '';
+  localStorage.removeItem('admin_token');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+}
+
+// Login button & enter key
+document.getElementById('btn-login').addEventListener('click', doLogin);
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('login-user').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('btn-logout').addEventListener('click', doLogout);
+
 // ── DEFAULT CONFIG (sesuai web asli) ───────────────────────────────
 const DEFAULT_CONFIG = {
   name:   'afr1zal annabil',
@@ -643,16 +751,15 @@ function populateForm(cfg) {
 
 // ── LOAD CONFIG ────────────────────────────────────────────────────
 async function loadConfig() {
-  // Tampilkan default dulu supaya form langsung terisi
   populateForm(DEFAULT_CONFIG);
   try {
-    const r = await fetch('/api/config');
+    const r = await fetch('/api/config', { headers: authHeaders() });
+    if (r.status === 401) { doLogout(); return; }
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     config = await r.json();
     populateForm(config);
     setStatus('Config dimuat. Siap diedit.');
   } catch {
-    // Kalau server tidak jalan, tetap pakai default
     config = { ...DEFAULT_CONFIG };
     setStatus('Pakai default — server tidak terhubung.', false);
   }
@@ -667,7 +774,7 @@ async function saveConfig() {
     const data = readForm();
     const r    = await fetch('/api/config', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body:   JSON.stringify(data),
     });
     const res = await r.json();
@@ -691,16 +798,11 @@ async function doCommit() {
   btn.disabled = true;
   btn.textContent = '⏳ Pushing...';
   try {
-    // Save first
     const data = readForm();
-    await fetch('/api/config', {
-      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
-    });
-    // Then commit
-    const r   = await fetch('/api/commit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:   JSON.stringify({ message: msg }),
+    await fetch('/api/config', { method:'POST', headers: authHeaders(), body: JSON.stringify(data) });
+    const r = await fetch('/api/commit', {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ message: msg }),
     });
     const res = await r.json();
     if (!r.ok) throw new Error(res.error || 'Gagal');
@@ -720,7 +822,7 @@ async function doCommit() {
 // ── GIT STATUS ─────────────────────────────────────────────────────
 async function loadGitStatus() {
   try {
-    const r   = await fetch('/api/status');
+    const r   = await fetch('/api/status', { headers: authHeaders() });
     const res = await r.json();
     if (res.log) {
       const firstLine = res.log.split('\n')[0];
@@ -767,7 +869,14 @@ document.addEventListener('keydown', e => {
 });
 
 // ── INIT ───────────────────────────────────────────────────────────
-loadConfig().then(loadGitStatus);
+if (authToken) {
+  // Sudah punya token — coba langsung masuk
+  document.getElementById('login-screen').classList.add('hidden');
+  loadConfig().then(loadGitStatus);
+} else {
+  // Belum login — tampilkan login screen
+  populateForm(DEFAULT_CONFIG); // preview tetap jalan di background
+}
 </script>
 
 </body>
